@@ -25,7 +25,7 @@ And we made some basic transformations to the rest of our columns.
 
 ## Data modeling :  
 
-
+![screenshot](model.PNG)
 
 ### DimDate:      
 ```   
@@ -141,7 +141,7 @@ return
 
 ## The final dahsboard :   
 The final one page sales management dashboard with a tooltip page created for the products chart meets the acceptance criteria, as you can see it shows sales over time, per customer and per product   
-![screenshot](final_dash.PNG)
+![screenshot](report.PNG)
     
 
 
