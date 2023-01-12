@@ -25,123 +25,50 @@ And we made some basic transformations to the rest of our columns.
 
 ## Data modeling :  
 
-![screenshot](model.PNG)
+![screenshot](model.png)
 
-### DimDate:      
+## Dax Measures :
+
+### Total Revenue:      
 ```   
-SELECT 
-    DateKey,
-    FullDateAlternateKey AS Full_Date,
-    EnglishDayNameOfWeek AS DayName,
-    EnglishMonthName AS MonthName,
-    LEFT(EnglishMonthName,3) AS MonthShort,--Useful for the graphs 
-    MonthNumberOfYear AS MonthNumber,
-    CalendarQuarter AS Quarter,
-    CalendarYear AS Year
-FROM DimDate
-WHERE CalendarYear IN (2013,2014) -- analyzing only the data from 2013 and 2014
-```     
-### DimCustomer:   
-```  
-SELECT  [CustomerKey]
-      ,[dc].[GeographyKey]
-      ,[CustomerAlternateKey]
-      ,[FirstName]
-      ,[MiddleName]
-      ,[LastName]
-      ,[FirstName]+ ' ' +[LastName] AS [FullNAME]
-      ,[BirthDate]
-      ,CASE upper([MaritalStatus])
-        WHEN 'M' Then 'Married'
-        WHEN 'S' Then 'Single'
-        END AS [MaritalStatus]
-      ,CASE upper([Gender])
-        WHEN 'M' Then 'Male'
-        WHEN 'F' then 'Female'
-        END AS Gender
-      ,[EmailAddress]
-      ,[YearlyIncome]
-      ,[TotalChildren]
-      ,[NumberChildrenAtHome]
-      ,[EnglishEducation] AS Education
-      ,[EnglishOccupation] AS Occupation
-      ,[HouseOwnerFlag]
-      ,[NumberCarsOwned]
-      ,[AddressLine1]
-      ,[AddressLine2]
-      ,[Phone]
-      ,[DateFirstPurchase]
-      ,[CommuteDistance]
-      ,[dg].[City] AS City
-  FROM [dbo].[DimCustomer] AS dc
-  left join DimGeography AS dg 
-  on dc.GeographyKey=dg.GeographyKey
-  ORDER BY CustomerKey ASC
-```     
-### DimProduct:    
-```     
-SELECT [ProductKey]
-      ,[ProductAlternateKey]
-      ,[dps].[ProductSubcategoryKey] AS ProductSubCategoryKey
-      ,[dps].[EnglishProductSubcategoryName] AS ProductSubCategory
-      ,[dpc].ProductCategoryKey AS ProductCategoryKey
-      ,[dpc].[EnglishProductCategoryName] AS ProductCategory
-      ,[EnglishProductName] AS Product
-      ,[SafetyStockLevel]
-      ,[ReorderPoint]
-      ,[DaysToManufacture]
-      ,[EnglishDescription] AS [Description]
-      ,[StartDate]
-      ,[EndDate]
-      ,ISNULL([Status],'Outdated') AS [Status]
-  FROM [dbo].[DimProduct] AS dp 
-  left join [dbo].[DimProductSubcategory] AS dps
-  on [dp].[ProductSubcategoryKey]=[dps].[ProductCategoryKey]
-  left join [dbo].[DimProductCategory] AS dpc 
-  on [dps].[ProductCategoryKey]=[dpc].[ProductCategoryKey]
-```        
-### FactInternetSales:    
-```  
-SELECT [ProductKey]
-      ,[OrderDateKey]
-      ,[DueDateKey]
-      ,[ShipDateKey]
-      ,[CustomerKey]
-      --,[CurrencyKey]
-      ,[OrderQuantity]
-      ,[UnitPrice]
-      ,[ExtendedAmount]
-      ,[UnitPriceDiscountPct]
-      ,[DiscountAmount]
-      ,[ProductStandardCost]
-      ,[TotalProductCost]
-      ,[SalesAmount]
-      ,[TaxAmt]
-      ,[OrderDate]
-      ,[DueDate]
-      ,[ShipDate]
-  FROM [dbo].[FactInternetSales]
-  WHERE LEFT (OrderDateKey, 4) IN (2013,2014) -- bringing only data of 2013 and 2014
-```      
-## Data model :   
-After the cleaning process we exported the results into csv files and imported them to power BI to create the star schema data model below      
-![screenshot](data_model.PNG)       
+Total Revenue = SUMX(Sales,Sales[Units]*RELATED('Product'[RetailPrice]))
+```    
 
-## Measures :   
-For our dashboard we created a simple measure to calculate the  total sales amount over all rows in the context   
- and for the top 10 customer  and the top 10 products we used the same DAX formula below       
- ```   
- Top 10 Customers = 
-    var customers=VALUES(DimCustomer[FullNAME])
+### Total Cost:      
+```   
+Total Cost = SUMX(Sales,Sales[Units]*RELATED('Product'[StandardCost]))
+```    
+
+### Top performing products :      
+```   
+Top 3 performing Products per year = 
+var prods=VALUES('Product'[ProductName])
 return 
-    CALCULATE(FactInternetSales[Sales],
-        TOPN(10,ALL(DimCustomer[FullNAME]),FactInternetSales[Sales]),
-        customers)
+    CALCULATE([Total Revenue],
+    TOPN(3,ALL('Product'[ProductName]),[Total Revenue],DESC),prods
+    )
+```  
+
+### Gross Profit:      
 ```   
+Gross Profit = CALCULATE([Total Revenue] - [Total Cost])
+```  
+
+### Gross Profit Last Month:      
+```   
+Gross profit Last Month = 
+CALCULATE([Gross Profit],PARALLELPERIOD('Date'[Date],-1,MONTH))
+```  
+
+### Gross Profit Month over Month change:      
+```   
+Gross profit MoM growth Change% = IF(ISBLANK([Gross profit Last Month]),"N/A",
+([Gross Profit] - [Gross profit Last Month])/([Gross profit Last Month]*100))
+``` 
 
 ## The final dahsboard :   
-The final one page sales management dashboard with a tooltip page created for the products chart meets the acceptance criteria, as you can see it shows sales over time, per customer and per product   
-![screenshot](report.PNG)
+The final one page sales management report.
+![screenshot](report.png)
     
 
 
